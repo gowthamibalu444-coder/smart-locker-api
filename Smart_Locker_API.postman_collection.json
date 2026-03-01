@@ -1,0 +1,349 @@
+{
+	"info": {
+		"_postman_id": "smart-locker-api-v1",
+		"name": "Smart Storage Locker API",
+		"description": "Complete API collection for the Smart Storage Locker Management System.\n\n**Setup:**\n1. Set `baseUrl` variable to `http://localhost:8000`\n2. Register a user and admin, then run Login to auto-populate `accessToken`\n3. All protected requests use `{{accessToken}}` automatically\n\n**Roles:**\n- `user`: Can reserve/release lockers, view own reservations\n- `admin`: Full locker CRUD, view all reservations",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{ "key": "baseUrl",      "value": "http://localhost:8000", "type": "string" },
+		{ "key": "accessToken",  "value": "",                      "type": "string" },
+		{ "key": "refreshToken", "value": "",                      "type": "string" },
+		{ "key": "lockerId",     "value": "",                      "type": "string" },
+		{ "key": "reservationId","value": "",                      "type": "string" }
+	],
+	"item": [
+		{
+			"name": "1. Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Alice\",\n    \"email\": \"alice@example.com\",\n    \"password\": \"AlicePass@123\",\n    \"confirm_password\": \"AlicePass@123\",\n    \"role\": \"user\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/auth/register/", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register", ""] }
+					},
+					"event": [{
+						"listen": "test",
+						"script": { "exec": [
+							"if (pm.response.code === 201) {",
+							"    var body = pm.response.json();",
+							"    pm.collectionVariables.set('accessToken', body.tokens.access);",
+							"    pm.collectionVariables.set('refreshToken', body.tokens.refresh);",
+							"    pm.test('Registered successfully', () => pm.expect(body.success).to.be.true);",
+							"}"
+						]}
+					}]
+				},
+				{
+					"name": "Register Admin",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Admin Bob\",\n    \"email\": \"admin@example.com\",\n    \"password\": \"AdminPass@123\",\n    \"confirm_password\": \"AdminPass@123\",\n    \"role\": \"admin\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/auth/register/", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register", ""] }
+					},
+					"event": [{
+						"listen": "test",
+						"script": { "exec": [
+							"if (pm.response.code === 201) {",
+							"    var body = pm.response.json();",
+							"    pm.collectionVariables.set('accessToken', body.tokens.access);",
+							"    pm.collectionVariables.set('refreshToken', body.tokens.refresh);",
+							"    pm.test('Admin registered', () => pm.expect(body.user.role).to.eql('admin'));",
+							"}"
+						]}
+					}]
+				},
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"alice@example.com\",\n    \"password\": \"AlicePass@123\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/auth/login/", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login", ""] }
+					},
+					"event": [{
+						"listen": "test",
+						"script": { "exec": [
+							"if (pm.response.code === 200) {",
+							"    var body = pm.response.json();",
+							"    pm.collectionVariables.set('accessToken', body.tokens.access);",
+							"    pm.collectionVariables.set('refreshToken', body.tokens.refresh);",
+							"    pm.test('Login successful', () => pm.expect(body.success).to.be.true);",
+							"}"
+						]}
+					}]
+				},
+				{
+					"name": "Login (Wrong Password → 401)",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"alice@example.com\",\n    \"password\": \"WrongPassword\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/auth/login/", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login", ""] }
+					},
+					"event": [{
+						"listen": "test",
+						"script": { "exec": ["pm.test('Returns 401', () => pm.expect(pm.response.code).to.eql(401));"] }
+					}]
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refresh\": \"{{refreshToken}}\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/auth/refresh/", "host": ["{{baseUrl}}"], "path": ["api", "auth", "refresh", ""] }
+					},
+					"event": [{
+						"listen": "test",
+						"script": { "exec": [
+							"if (pm.response.code === 200) {",
+							"    var body = pm.response.json();",
+							"    pm.collectionVariables.set('accessToken', body.tokens.access);",
+							"    pm.test('Token refreshed', () => pm.expect(body.success).to.be.true);",
+							"}"
+						]}
+					}]
+				}
+			]
+		},
+		{
+			"name": "2. Locker Management",
+			"item": [
+				{
+					"name": "Create Locker (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{accessToken}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"locker_number\": \"L001\",\n    \"location\": \"Floor 1 - Zone A\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/lockers/", "host": ["{{baseUrl}}"], "path": ["api", "lockers", ""] }
+					},
+					"event": [{
+						"listen": "test",
+						"script": { "exec": [
+							"if (pm.response.code === 201) {",
+							"    var body = pm.response.json();",
+							"    pm.collectionVariables.set('lockerId', body.locker.id);",
+							"    pm.test('Locker created', () => pm.expect(body.success).to.be.true);",
+							"}"
+						]}
+					}]
+				},
+				{
+					"name": "Create Locker as User (→ 403)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{accessToken}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"locker_number\": \"L999\",\n    \"location\": \"Unauthorized\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/lockers/", "host": ["{{baseUrl}}"], "path": ["api", "lockers", ""] }
+					},
+					"event": [{
+						"listen": "test",
+						"script": { "exec": ["pm.test('403 for non-admin', () => pm.expect(pm.response.code).to.eql(403));"] }
+					}]
+				},
+				{
+					"name": "List All Lockers",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+						"url": { "raw": "{{baseUrl}}/api/lockers/", "host": ["{{baseUrl}}"], "path": ["api", "lockers", ""] }
+					},
+					"event": [{
+						"listen": "test",
+						"script": { "exec": ["pm.test('200 OK', () => pm.expect(pm.response.code).to.eql(200));"] }
+					}]
+				},
+				{
+					"name": "Get Locker Detail",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+						"url": { "raw": "{{baseUrl}}/api/lockers/{{lockerId}}/", "host": ["{{baseUrl}}"], "path": ["api", "lockers", "{{lockerId}}", ""] }
+					}
+				},
+				{
+					"name": "Update Locker (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{accessToken}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"locker_number\": \"L001\",\n    \"location\": \"Floor 1 - Zone A (Updated)\",\n    \"status\": \"available\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/lockers/{{lockerId}}/", "host": ["{{baseUrl}}"], "path": ["api", "lockers", "{{lockerId}}", ""] }
+					}
+				},
+				{
+					"name": "Deactivate Locker (Admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+						"url": { "raw": "{{baseUrl}}/api/lockers/{{lockerId}}/", "host": ["{{baseUrl}}"], "path": ["api", "lockers", "{{lockerId}}", ""] }
+					},
+					"event": [{
+						"listen": "test",
+						"script": { "exec": ["pm.test('Deactivated or 400 if occupied', () => pm.expect([200, 400]).to.include(pm.response.code));"] }
+					}]
+				}
+			]
+		},
+		{
+			"name": "3. Available Lockers (Redis Cached)",
+			"item": [
+				{
+					"name": "List Available Lockers (1st call — DB)",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+						"url": { "raw": "{{baseUrl}}/api/lockers/available/", "host": ["{{baseUrl}}"], "path": ["api", "lockers", "available", ""] }
+					},
+					"event": [{
+						"listen": "test",
+						"script": { "exec": [
+							"pm.test('Returns source field', () => {",
+							"    var body = pm.response.json();",
+							"    pm.expect(body).to.have.property('source');",
+							"    pm.expect(['database', 'cache']).to.include(body.source);",
+							"});"
+						]}
+					}]
+				},
+				{
+					"name": "List Available Lockers (2nd call — Cache)",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+						"url": { "raw": "{{baseUrl}}/api/lockers/available/", "host": ["{{baseUrl}}"], "path": ["api", "lockers", "available", ""] }
+					},
+					"event": [{
+						"listen": "test",
+						"script": { "exec": ["pm.test('Served from cache', () => pm.expect(pm.response.json().source).to.eql('cache'));"] }
+					}]
+				}
+			]
+		},
+		{
+			"name": "4. Reservations",
+			"item": [
+				{
+					"name": "Create Reservation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{accessToken}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"locker_id\": \"{{lockerId}}\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/reservations/", "host": ["{{baseUrl}}"], "path": ["api", "reservations", ""] }
+					},
+					"event": [{
+						"listen": "test",
+						"script": { "exec": [
+							"if (pm.response.code === 201) {",
+							"    var body = pm.response.json();",
+							"    pm.collectionVariables.set('reservationId', body.reservation.id);",
+							"    pm.test('Reserved', () => pm.expect(body.success).to.be.true);",
+							"}"
+						]}
+					}]
+				},
+				{
+					"name": "Create Reservation (same locker → conflict)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{accessToken}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"locker_id\": \"{{lockerId}}\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/reservations/", "host": ["{{baseUrl}}"], "path": ["api", "reservations", ""] }
+					},
+					"event": [{
+						"listen": "test",
+						"script": { "exec": ["pm.test('Conflict 400/409', () => pm.expect([400,409]).to.include(pm.response.code));"] }
+					}]
+				},
+				{
+					"name": "List Reservations",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+						"url": { "raw": "{{baseUrl}}/api/reservations/", "host": ["{{baseUrl}}"], "path": ["api", "reservations", ""] }
+					}
+				},
+				{
+					"name": "Get Reservation Detail",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+						"url": { "raw": "{{baseUrl}}/api/reservations/{{reservationId}}/", "host": ["{{baseUrl}}"], "path": ["api", "reservations", "{{reservationId}}", ""] }
+					}
+				},
+				{
+					"name": "Release Locker",
+					"request": {
+						"method": "PUT",
+						"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+						"url": { "raw": "{{baseUrl}}/api/reservations/{{reservationId}}/release/", "host": ["{{baseUrl}}"], "path": ["api", "reservations", "{{reservationId}}", "release", ""] }
+					},
+					"event": [{
+						"listen": "test",
+						"script": { "exec": ["pm.test('Released 200', () => pm.expect(pm.response.code).to.eql(200));"] }
+					}]
+				},
+				{
+					"name": "Release Again (→ 400 already released)",
+					"request": {
+						"method": "PUT",
+						"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+						"url": { "raw": "{{baseUrl}}/api/reservations/{{reservationId}}/release/", "host": ["{{baseUrl}}"], "path": ["api", "reservations", "{{reservationId}}", "release", ""] }
+					},
+					"event": [{
+						"listen": "test",
+						"script": { "exec": ["pm.test('400 already released', () => pm.expect(pm.response.code).to.eql(400));"] }
+					}]
+				}
+			]
+		}
+	]
+}

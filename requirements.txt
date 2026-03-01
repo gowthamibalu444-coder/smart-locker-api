@@ -1,0 +1,33 @@
+# Django & REST Framework
+Django==5.0.2
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
+
+# JWT Authentication
+djangorestframework-simplejwt==5.3.1
+
+# Database
+psycopg2-binary==2.9.9
+
+# Redis & Caching
+redis==5.0.1
+django-redis==5.4.0
+
+# Environment variables
+python-decouple==3.8
+
+# Logging
+python-json-logger==2.0.7
+
+# WSGI server (production)
+gunicorn==21.2.0
+
+# API Documentation
+drf-spectacular==0.27.1
+
+# Utilities
+Pillow==10.2.0
+
+# Free Tier Production Deployment
+whitenoise==6.6.0
+dj-database-url==2.1.0

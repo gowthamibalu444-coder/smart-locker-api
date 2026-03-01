@@ -5,10 +5,9 @@ from .base import *  # noqa: F401, F403
 
 DEBUG = False
 
-# Render sets the RENDER hostname in the environment
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
-if "RENDER" in os.environ:
-    ALLOWED_HOSTS.append(os.environ.get("RENDER_EXTERNAL_HOSTNAME"))
+# Allow host from env or default to allow all if not set
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
+
 
 # Neon / Render PostgreSQL connection
 DATABASES = {

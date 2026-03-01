@@ -24,3 +24,4 @@ COPY . .
 RUN mkdir -p /app/logs
 
 EXPOSE 8000
+CMD ["sh", "-c", "./build.sh && gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000}"]

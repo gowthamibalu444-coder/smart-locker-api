@@ -21,7 +21,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create logs directory
-RUN mkdir -p /app/logs
-
+RUN mkdir -p /app/logs && chmod +x /app/build.sh
 EXPOSE 8000
 CMD ["sh", "-c", "./build.sh && gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000}"]

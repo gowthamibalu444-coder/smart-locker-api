@@ -5,9 +5,9 @@ from .base import *  # noqa: F401, F403
 
 DEBUG = False
 
-# Allow host from env or default to allow all if not set
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
-
+# Hardcode domains to guarantee access
+ALLOWED_HOSTS = ["*", "smart-locker-api-production.up.railway.app"]
+CSRF_TRUSTED_ORIGINS = ["https://smart-locker-api-production.up.railway.app"]
 
 # Neon / Render PostgreSQL connection
 DATABASES = {
